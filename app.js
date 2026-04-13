@@ -1,52 +1,103 @@
 let scanning = false;
-let currentLatitude = null;
-let currentLongitude = null;
-let currentAccuracy = null;
+let sessionId = "SESSAO_" + Date.now();
+
+let db;
 
 function updateStatus(message) {
   document.getElementById("status").innerText = message;
 }
 
+// ===== INIT DATABASE =====
+function initDB() {
+  let request = indexedDB.open("senseDB", 1);
+
+  request.onupgradeneeded = function (event) {
+    db = event.target.result;
+    db.createObjectStore("leituras", { keyPath: "id_registro" });
+  };
+
+  request.onsuccess = function (event) {
+    db = event.target.result;
+    updateStatus("Banco pronto");
+  };
+}
+
+// ===== SALVAR =====
+function salvarLeitura(leitura) {
+  let tx = db.transaction("leituras", "readwrite");
+  let store = tx.objectStore("leituras");
+  store.add(leitura);
+}
+
+// ===== CONTAR =====
+function contarLeituras(callback) {
+  let tx = db.transaction("leituras", "readonly");
+  let store = tx.objectStore("leituras");
+
+  let countRequest = store.count();
+
+  countRequest.onsuccess = function () {
+    callback(countRequest.result);
+  };
+}
+
+// ===== START =====
 function startScan() {
   scanning = true;
-  updateStatus("Status: iniciando leitura...");
+  updateStatus("Iniciando leitura...");
 
-  if (!navigator.geolocation) {
-    updateStatus("Status: geolocalização não suportada neste navegador");
-    return;
-  }
+  capturarLeitura();
+}
+
+// ===== STOP =====
+function stopScan() {
+  scanning = false;
+
+  contarLeituras((total) => {
+    updateStatus("Finalizado. Total salvo: " + total);
+  });
+}
+
+// ===== CAPTURA =====
+function capturarLeitura() {
+  if (!scanning) return;
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      currentLatitude = position.coords.latitude;
-      currentLongitude = position.coords.longitude;
-      currentAccuracy = position.coords.accuracy;
+      let leitura = {
+        id_registro: "ID_" + Date.now(),
+        session_id: sessionId,
+        beacon_id: "SIMULADO_" + Math.floor(Math.random() * 5),
+        rssi: -50 - Math.floor(Math.random() * 30),
+        timestamp_iso: new Date().toISOString(),
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy_m: position.coords.accuracy
+      };
 
-      updateStatus(
-        "Status: localização capturada | LAT: " +
-        currentLatitude +
-        " | LON: " +
-        currentLongitude +
-        " | ACC: " +
-        currentAccuracy + "m"
-      );
+      salvarLeitura(leitura);
+
+      contarLeituras((total) => {
+        updateStatus("Lendo... total salvo: " + total);
+      });
+
+      setTimeout(capturarLeitura, 5000);
     },
     (error) => {
-      updateStatus("Status: erro ao obter localização | Código: " + error.code);
+      updateStatus("Erro localização: " + error.code);
     },
     {
-      enableHighAccuracy: false,
-      timeout: 30000,
-      maximumAge: 60000
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
     }
   );
 }
 
-function stopScan() {
-  scanning = false;
-  updateStatus("Status: finalizado");
+// ===== SYNC (placeholder) =====
+function syncData() {
+  updateStatus("Pronto para sincronizar (próximo passo)");
 }
 
-function syncData() {
-  updateStatus("Status: sincronização ainda não implementada");
-}
+// ===== INIT =====
+initDB();
