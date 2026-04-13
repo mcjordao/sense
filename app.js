@@ -162,7 +162,7 @@ function capturarLeitura() {
 
 // ===== SYNC =====
 async function syncData() {
-  if (!SCRIPT_URL || SCRIPT_URL === "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT") {
+  if (!SCRIPT_URL) {
     updateStatus("Configure a URL do Apps Script no app.js");
     return;
   }
