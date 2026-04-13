@@ -1,0 +1,8 @@
+{
+  "name": "Sense BLE",
+  "short_name": "Sense",
+  "start_url": "/sense/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000"
+}
