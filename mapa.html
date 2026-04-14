@@ -14,13 +14,13 @@
   <style>
     :root {
       --bg: #34302F;
-      --bg-soft: rgba(255, 255, 255, 0.08);
-      --bg-panel: rgba(20, 20, 20, 0.48);
-      --border: rgba(255, 255, 255, 0.12);
+      --panel: rgba(20, 20, 20, 0.58);
+      --panel-strong: rgba(20, 20, 20, 0.78);
+      --border: rgba(255,255,255,0.12);
       --text: #f1f1f1;
       --text-soft: #cfcfcf;
       --accent: #f4b400;
-      --accent-soft: rgba(244, 180, 0, 0.18);
+      --accent-soft: rgba(244,180,0,0.18);
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
     }
 
@@ -39,112 +39,62 @@
     }
 
     .page {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+      position: relative;
       width: 100%;
+      height: 100%;
       background: var(--bg);
     }
 
     .topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
       display: flex;
+      justify-content: center;
       align-items: center;
-      justify-content: space-between;
-      padding: 18px 28px;
-      position: relative;
-      z-index: 20;
-      background: var(--bg);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
+      padding: 18px 20px 10px 20px;
+      pointer-events: none;
     }
 
     .brand-logo {
-      height: 72px;
-      width: auto;
+      width: 180px;
+      max-width: 60vw;
+      height: auto;
+      object-fit: contain;
       display: block;
+      pointer-events: auto;
     }
 
-    .nav {
-      display: flex;
-      gap: 28px;
-      align-items: center;
-      font-size: 14px;
-      color: var(--text-soft);
-    }
-
-    .nav-item {
-      position: relative;
-      color: var(--text-soft);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .nav-item.active {
-      color: var(--accent);
-    }
-
-    .nav-item.active::after {
-      content: "";
+    .map-wrapper {
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -6px;
-      height: 2px;
-      background: var(--accent);
-      border-radius: 999px;
+      inset: 0;
+      padding-top: 96px;
     }
 
-    .workspace {
-      flex: 1;
-      min-height: 0;
-      padding: 0 28px 28px 28px;
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 18px;
-      position: relative;
-      z-index: 10;
-      background: var(--bg);
+    #map {
+      width: 100%;
+      height: 100%;
     }
 
-    .sidebar,
-    .map-shell {
-      background: var(--bg-panel);
-      backdrop-filter: blur(8px);
+    .floating-panel {
+      position: absolute;
+      top: 112px;
+      left: 18px;
+      z-index: 900;
+      width: 300px;
+      max-width: calc(100vw - 36px);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
       border: 1px solid var(--border);
-      border-radius: 22px;
+      border-radius: 20px;
       box-shadow: var(--shadow);
       overflow: hidden;
     }
 
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
-    .panel-header {
-      padding: 18px 18px 12px 18px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .panel-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0 0 6px 0;
-    }
-
-    .panel-subtitle {
-      font-size: 13px;
-      color: var(--text-soft);
-      line-height: 1.45;
-      margin: 0;
-    }
-
-    .controls {
-      padding: 18px;
+    .floating-body {
+      padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -157,7 +107,7 @@
     }
 
     .field label {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-soft);
       text-transform: uppercase;
@@ -166,10 +116,10 @@
 
     .field select {
       width: 100%;
-      padding: 14px 14px;
+      padding: 13px 14px;
       border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.07);
       color: var(--text);
       font-size: 14px;
       outline: none;
@@ -179,59 +129,37 @@
       color: #111;
     }
 
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
     .btn {
       appearance: none;
-      border: 1px solid rgba(255,255,255,0.16);
+      border: 1px solid rgba(244,180,0,0.45);
       border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      color: var(--text);
-      padding: 12px 18px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 11px 16px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       transition: 0.2s ease;
+      width: fit-content;
+      min-width: 110px;
     }
 
     .btn:hover {
       transform: translateY(-1px);
-      background: rgba(255,255,255,0.1);
-    }
-
-    .btn-primary {
-      background: var(--accent-soft);
-      border-color: rgba(244,180,0,0.4);
-      color: var(--accent);
-    }
-
-    .status-card {
-      margin: 0 18px 18px 18px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--text-soft);
-      font-size: 13px;
-      line-height: 1.45;
+      background: rgba(244,180,0,0.24);
     }
 
     .legend {
-      margin: 0 18px 18px 18px;
-      padding: 16px;
+      padding: 14px;
       border-radius: 16px;
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
     }
 
     .legend-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       color: var(--text);
     }
 
@@ -245,26 +173,33 @@
     .legend-row {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      gap: 12px;
+      font-size: 11px;
       color: var(--text-soft);
     }
 
-    .map-shell {
-      position: relative;
-      min-height: 0;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-      min-height: 420px;
+    .status-chip {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 900;
+      max-width: min(420px, calc(100vw - 36px));
+      background: var(--panel-strong);
+      color: var(--text-soft);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.45;
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
     }
 
     .map-caption {
       position: absolute;
-      left: 18px;
+      right: 18px;
       bottom: 18px;
-      z-index: 500;
+      z-index: 900;
       background: rgba(18,18,18,0.78);
       color: var(--text-soft);
       border: 1px solid rgba(255,255,255,0.08);
@@ -287,30 +222,40 @@
       line-height: 1.45;
     }
 
-    @media (max-width: 960px) {
-      .workspace {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        order: 2;
-      }
-
-      .map-shell {
-        order: 1;
-        min-height: 420px;
-      }
-
-      #map {
-        min-height: 420px;
-      }
-
-      .nav {
-        display: none;
+    @media (max-width: 768px) {
+      .topbar {
+        padding-top: 16px;
+        padding-bottom: 8px;
       }
 
       .brand-logo {
-        height: 56px;
+        width: 160px;
+        max-width: 52vw;
+      }
+
+      .map-wrapper {
+        padding-top: 88px;
+      }
+
+      .floating-panel {
+        top: 98px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        max-width: none;
+      }
+
+      .status-chip {
+        left: 12px;
+        right: 12px;
+        bottom: 58px;
+        max-width: none;
+      }
+
+      .map-caption {
+        right: 12px;
+        bottom: 12px;
+        font-size: 11px;
       }
     }
   </style>
@@ -319,56 +264,35 @@
 
   <div class="page">
     <div class="topbar">
-      <div class="brand">
-        <img class="brand-logo" src="Nimble%20VS%20AM%20CENTRO.png" alt="Nimble Virtual Solutions">
-      </div>
-
-      <div class="nav">
-        <a href="#" class="nav-item active">início</a>
-        <a href="#" class="nav-item">serviços</a>
-        <a href="#" class="nav-item">contato</a>
-      </div>
+      <img class="brand-logo" src="Nimble VS AM CENTRO.png" alt="Nimble Virtual Solutions">
     </div>
 
-    <div class="workspace">
-      <div class="sidebar">
-        <div class="panel-header">
-          <h2 class="panel-title">Painel de Sessão</h2>
-          <p class="panel-subtitle">
-            Selecione uma coleta para visualizar os pontos detectados, sua intensidade e a permanência agregada no mapa.
-          </p>
+    <div class="floating-panel">
+      <div class="floating-body">
+        <div class="field">
+          <label for="sessionSelect">Sessão</label>
+          <select id="sessionSelect"></select>
         </div>
 
-        <div class="controls">
-          <div class="field">
-            <label for="sessionSelect">Sessão</label>
-            <select id="sessionSelect"></select>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn-primary" id="reloadBtn">Atualizar</button>
-          </div>
-        </div>
-
-        <div class="status-card" id="status">
-          Carregando dados da planilha...
-        </div>
+        <button class="btn" id="reloadBtn">Atualizar</button>
 
         <div class="legend">
-          <div class="legend-title">Intensidade do Heatmap</div>
+          <div class="legend-title">Intensidade de Permanência</div>
           <div class="legend-scale"></div>
           <div class="legend-row">
-            <span>Menor permanência</span>
-            <span>Maior permanência</span>
+            <span>Menor</span>
+            <span>Maior</span>
           </div>
         </div>
       </div>
-
-      <div class="map-shell">
-        <div id="map"></div>
-        <div class="map-caption">Base cartográfica: OpenStreetMap</div>
-      </div>
     </div>
+
+    <div class="map-wrapper">
+      <div id="map"></div>
+    </div>
+
+    <div class="status-chip" id="status">Carregando dados da planilha...</div>
+    <div class="map-caption">Base cartográfica: OpenStreetMap</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
