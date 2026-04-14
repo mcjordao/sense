@@ -10,29 +10,24 @@
 </head>
 
 <body>
-
   <div class="page">
 
-    <!-- LOGO -->
     <div class="logo-wrapper">
-      <img src="Nimble VS AM CENTRO.png" class="logo">
+      <img src="Nimble VS AM CENTRO.png" class="logo" alt="Nimble Virtual Solutions">
     </div>
 
-    <!-- BOTÕES -->
     <div class="actions">
-      <button class="btn btn-primary" onclick="startScan()">INICIAR</button>
-      <button class="btn" onclick="stopScan()">FINALIZAR</button>
-      <button class="btn" onclick="syncData()">SINCRONIZAR</button>
+      <button id="btnStart" class="btn btn-active" onclick="startScan()">INICIAR</button>
+      <button id="btnStop" class="btn" onclick="stopScan()">FINALIZAR</button>
+      <button id="btnSync" class="btn" onclick="syncData()">SINCRONIZAR</button>
     </div>
 
-    <!-- STATUS -->
     <div id="status" class="status">
-      Status: parado
+      Banco pronto
     </div>
 
   </div>
 
   <script src="app.js"></script>
-
 </body>
 </html>
