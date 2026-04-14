@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>SENSE BLE</title>
+  <title>Nimble Sense</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="manifest" href="manifest.json">
@@ -10,18 +10,66 @@
 </head>
 
 <body>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <img class="brand-logo" src="Nimble VS AM CENTRO.png" alt="Nimble Virtual Solutions">
+      </div>
 
-  <h1>SENSE BLE</h1>
+      <div class="nav">
+        <a href="#" class="nav-item active">início</a>
+        <a href="#" class="nav-item">serviços</a>
+        <a href="#" class="nav-item">contato</a>
+      </div>
+    </div>
 
-  <div class="container">
-    <button onclick="startScan()">INICIAR</button>
-    <button onclick="stopScan()">FINALIZAR</button>
-    <button onclick="syncData()">SINCRONIZAR</button>
+    <div class="hero">
+      <div class="hero-panel">
+        <h1>
+          Coleta <span class="accent">inteligente</span> de presença e
+          permanência com <span class="accent">Nimble Sense</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Inicie a leitura, finalize a sessão e sincronize os dados coletados com a base central.
+        </p>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="startScan()">INICIAR</button>
+          <button class="btn" onclick="stopScan()">FINALIZAR</button>
+          <button class="btn" onclick="syncData()">SINCRONIZAR</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Leitura</div>
+        <div class="card-text">
+          Captura contínua da posição e dos dispositivos detectados durante a sessão.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sessão</div>
+        <div class="card-text">
+          Organização das leituras em uma coleta única, pronta para tratamento posterior.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sincronização</div>
+        <div class="card-text">
+          Envio dos dados armazenados localmente para a planilha central em nuvem.
+        </div>
+      </div>
+    </div>
+
+    <div class="status-wrapper">
+      <div id="status" class="status-card">Status: parado</div>
+    </div>
   </div>
 
-  <div id="status">Status: parado</div>
-
   <script src="app.js"></script>
-
 </body>
 </html>
