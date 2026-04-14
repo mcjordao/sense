@@ -1,20 +1,138 @@
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  margin-top: 40px;
+:root {
+  --bg: #34302F;
+  --panel: rgba(20, 20, 20, 0.5);
+  --border: rgba(255,255,255,0.12);
+  --text: #f1f1f1;
+  --text-soft: #cfcfcf;
+  --accent: #f4b400;
+  --accent-soft: rgba(244,180,0,0.18);
 }
 
-.container {
-  margin: 20px;
+* {
+  box-sizing: border-box;
 }
 
-button {
-  padding: 15px;
-  margin: 10px;
-  font-size: 16px;
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-#status {
-  margin-top: 20px;
+/* ===== TOPO ===== */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+}
+
+.brand-logo {
+  height: 56px;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.nav-item {
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+.nav-item.active {
+  color: var(--accent);
+}
+
+/* ===== HERO ===== */
+.hero {
+  padding: 16px;
+}
+
+.hero-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.hero h1 {
+  font-size: 22px;
+  line-height: 1.3;
+  margin: 0 0 10px 0;
+}
+
+.hero-subtitle {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-bottom: 16px;
+}
+
+.accent {
+  color: var(--accent);
+}
+
+/* ===== BOTÕES ===== */
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border-radius: 999px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
   font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(244,180,0,0.4);
+}
+
+/* ===== CARDS ===== */
+.cards {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.card-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.card-text {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* ===== STATUS ===== */
+.status-wrapper {
+  padding: 16px;
+}
+
+.status-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-soft);
 }
