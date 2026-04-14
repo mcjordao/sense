@@ -1,8 +1,23 @@
 let scanning = false;
 let sessionId = "SESSAO_" + Date.now();
+let sessionLabel = gerarSessionLabel();
 let db;
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGiVomw6DKjUN8M1z2xQQIO5uvUn6cYi2KQfRud7JVmp8t42CEjuoUwMYXD4nFj_kYQw/exec";
+const SCRIPT_URL = "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT";
+
+function gerarSessionLabel() {
+  const agora = new Date();
+
+  return agora.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
 
 function updateStatus(message) {
   document.getElementById("status").innerText = message;
@@ -98,7 +113,10 @@ function startScan() {
   }
 
   scanning = true;
+
   sessionId = "SESSAO_" + Date.now();
+  sessionLabel = gerarSessionLabel();
+
   updateStatus("Iniciando leitura...");
   capturarLeitura();
 }
@@ -112,9 +130,7 @@ function stopScan() {
 }
 
 function capturarLeitura() {
-  if (!scanning) {
-    return;
-  }
+  if (!scanning) return;
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
@@ -123,13 +139,14 @@ function capturarLeitura() {
       const leitura = {
         id_registro: "ID_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
         session_id: sessionId,
+        session_label: sessionLabel,
         usuario: "TESTE_GITHUB",
         dispositivo: navigator.userAgent,
         beacon_id: "SIMULADO_" + Math.floor(Math.random() * 5),
         beacon_name: "SIMULADO",
         rssi: -50 - Math.floor(Math.random() * 30),
         timestamp_iso: agora.toISOString(),
-        data_local: agora.toLocaleString("pt-BR"),
+        data_local: agora.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy_m: position.coords.accuracy,
@@ -143,7 +160,7 @@ function capturarLeitura() {
         contarLeituras((total) => {
           updateStatus("Lendo... total salvo: " + total);
         });
-      } catch (error) {
+      } catch {
         updateStatus("Erro ao salvar leitura local");
       }
 
