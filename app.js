@@ -8,7 +8,6 @@ function updateStatus(message) {
   document.getElementById("status").innerText = message;
 }
 
-// ===== INIT DATABASE =====
 function initDB() {
   const request = indexedDB.open("senseDB", 1);
 
@@ -30,7 +29,6 @@ function initDB() {
   };
 }
 
-// ===== SALVAR =====
 function salvarLeitura(leitura) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("leituras", "readwrite");
@@ -47,7 +45,6 @@ function salvarLeitura(leitura) {
   });
 }
 
-// ===== CONTAR =====
 function contarLeituras(callback) {
   const tx = db.transaction("leituras", "readonly");
   const store = tx.objectStore("leituras");
@@ -62,7 +59,6 @@ function contarLeituras(callback) {
   };
 }
 
-// ===== LISTAR TODAS =====
 function listarLeituras() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("leituras", "readonly");
@@ -79,7 +75,6 @@ function listarLeituras() {
   });
 }
 
-// ===== LIMPAR TODAS =====
 function limparLeituras() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("leituras", "readwrite");
@@ -96,14 +91,18 @@ function limparLeituras() {
   });
 }
 
-// ===== START =====
 function startScan() {
+  if (!db) {
+    updateStatus("Banco ainda não está pronto");
+    return;
+  }
+
   scanning = true;
+  sessionId = "SESSAO_" + Date.now();
   updateStatus("Iniciando leitura...");
   capturarLeitura();
 }
 
-// ===== STOP =====
 function stopScan() {
   scanning = false;
 
@@ -112,9 +111,10 @@ function stopScan() {
   });
 }
 
-// ===== CAPTURA =====
 function capturarLeitura() {
-  if (!scanning) return;
+  if (!scanning) {
+    return;
+  }
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
@@ -151,6 +151,7 @@ function capturarLeitura() {
     },
     (error) => {
       updateStatus("Erro localização: " + error.code);
+      setTimeout(capturarLeitura, 5000);
     },
     {
       enableHighAccuracy: true,
@@ -160,10 +161,14 @@ function capturarLeitura() {
   );
 }
 
-// ===== SYNC =====
 async function syncData() {
-  if (!SCRIPT_URL) {
+  if (!SCRIPT_URL || SCRIPT_URL === "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT") {
     updateStatus("Configure a URL do Apps Script no app.js");
+    return;
+  }
+
+  if (!db) {
+    updateStatus("Banco ainda não está pronto");
     return;
   }
 
@@ -199,5 +204,4 @@ async function syncData() {
   }
 }
 
-// ===== INIT =====
 initDB();
