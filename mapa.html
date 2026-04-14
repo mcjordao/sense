@@ -8,7 +8,6 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
 
@@ -44,18 +43,19 @@
 </head>
 <body>
   <div class="topbar">NVS Beacon - Heatmap</div>
-  <div class="info" id="status">Mapa carregado. Próximo passo: ligar aos dados reais.</div>
+  <div class="info" id="status">Carregando dados da planilha...</div>
   <div id="map"></div>
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
 
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
   <script>
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQb2jTurQ3bmlTjrNktoGn3TrGcm2gdUDjEP1teOyFIEvmRU6mFdo84FRIhFza1e1a8BO9g3cmIwPFF/pub?gid=1075648457&single=true&output=csv";
+
     const statusEl = document.getElementById("status");
 
     const map = L.map("map").setView([-23.5882, -46.6439], 18);
@@ -65,42 +65,149 @@
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
-    const heatData = [
-      [-23.5882575, -46.6439365, 42]
-    ];
+    let heatLayer = null;
+    let pointLayerGroup = L.layerGroup().addTo(map);
 
-    const normalizedHeatData = heatData.map(item => {
-      const lat = item[0];
-      const lon = item[1];
-      const weight = Math.min(item[2] / 50, 1);
-      return [lat, lon, weight];
-    });
+    function parseCSVLine(line) {
+      const result = [];
+      let current = "";
+      let insideQuotes = false;
 
-    L.heatLayer(normalizedHeatData, {
-      radius: 35,
-      blur: 25,
-      maxZoom: 20,
-      minOpacity: 0.35
-    }).addTo(map);
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i + 1];
 
-    heatData.forEach(item => {
-      L.circleMarker([item[0], item[1]], {
-        radius: 6,
-        weight: 1,
-        fillOpacity: 0.8
-      })
-      .addTo(map)
-      .bindPopup(
-        "LAT: " + item[0] + "<br>" +
-        "LON: " + item[1] + "<br>" +
-        "DURAÇÃO: " + item[2] + " s"
-      );
-    });
+        if (char === '"') {
+          if (insideQuotes && nextChar === '"') {
+            current += '"';
+            i++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === "," && !insideQuotes) {
+          result.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
 
-    const bounds = L.latLngBounds(heatData.map(item => [item[0], item[1]]));
-    map.fitBounds(bounds.pad(0.2));
+      result.push(current);
+      return result;
+    }
 
-    statusEl.innerText = "Heatmap de teste carregado com dados simulados da sua planilha.";
+    function normalizeNumber(value) {
+      if (value === null || value === undefined) return NaN;
+
+      const cleaned = String(value).trim().replace(",", ".");
+      return parseFloat(cleaned);
+    }
+
+    async function loadHeatmap() {
+      try {
+        const response = await fetch(CSV_URL, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("Falha ao acessar CSV");
+        }
+
+        const csvText = await response.text();
+        const lines = csvText.trim().split(/\r?\n/);
+
+        if (lines.length < 2) {
+          throw new Error("CSV sem dados");
+        }
+
+        const headers = parseCSVLine(lines[0]).map(h => h.trim().toUpperCase());
+
+        const idxBeaconId = headers.indexOf("BEACON_ID");
+        const idxBeaconName = headers.indexOf("BEACON_NAME");
+        const idxLat = headers.indexOf("LAT");
+        const idxLon = headers.indexOf("LON");
+        const idxDuracao = headers.indexOf("DURACAO");
+
+        if (
+          idxBeaconId === -1 ||
+          idxBeaconName === -1 ||
+          idxLat === -1 ||
+          idxLon === -1 ||
+          idxDuracao === -1
+        ) {
+          throw new Error("Cabeçalhos esperados não encontrados no CSV");
+        }
+
+        const rows = lines.slice(1)
+          .map(parseCSVLine)
+          .map(cols => {
+            const lat = normalizeNumber(cols[idxLat]);
+            const lon = normalizeNumber(cols[idxLon]);
+            const duracao = normalizeNumber(cols[idxDuracao]);
+
+            return {
+              beaconId: (cols[idxBeaconId] || "").trim(),
+              beaconName: (cols[idxBeaconName] || "").trim(),
+              lat,
+              lon,
+              duracao
+            };
+          })
+          .filter(item =>
+            !Number.isNaN(item.lat) &&
+            !Number.isNaN(item.lon) &&
+            !Number.isNaN(item.duracao)
+          );
+
+        if (!rows.length) {
+          throw new Error("Nenhuma linha válida encontrada");
+        }
+
+        const maxDuracao = Math.max(...rows.map(r => r.duracao), 1);
+
+        const heatData = rows.map(item => [
+          item.lat,
+          item.lon,
+          Math.max(item.duracao / maxDuracao, 0.15)
+        ]);
+
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+        }
+
+        pointLayerGroup.clearLayers();
+
+        heatLayer = L.heatLayer(heatData, {
+          radius: 35,
+          blur: 25,
+          maxZoom: 20,
+          minOpacity: 0.35
+        }).addTo(map);
+
+        rows.forEach(item => {
+          L.circleMarker([item.lat, item.lon], {
+            radius: 6,
+            weight: 1,
+            fillOpacity: 0.8
+          })
+          .addTo(pointLayerGroup)
+          .bindPopup(
+            "<b>" + item.beaconName + "</b><br>" +
+            "ID: " + item.beaconId + "<br>" +
+            "LAT: " + item.lat + "<br>" +
+            "LON: " + item.lon + "<br>" +
+            "DURAÇÃO: " + item.duracao + " s"
+          );
+        });
+
+        const bounds = L.latLngBounds(rows.map(item => [item.lat, item.lon]));
+        map.fitBounds(bounds.pad(0.2));
+
+        statusEl.innerText = "Heatmap carregado com " + rows.length + " pontos da planilha.";
+      } catch (error) {
+        statusEl.innerText = "Erro ao carregar mapa: " + error.message;
+      }
+    }
+
+    loadHeatmap();
   </script>
 </body>
 </html>
