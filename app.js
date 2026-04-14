@@ -3,7 +3,11 @@ let sessionId = "SESSAO_" + Date.now();
 let sessionLabel = gerarSessionLabel();
 let db;
 
-const SCRIPT_URL = "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGiVomw6DKjUN8M1z2xQQIO5uvUn6cYi2KQfRud7JVmp8t42CEjuoUwMYXD4nFj_kYQw/exec";
+
+const btnStart = () => document.getElementById("btnStart");
+const btnStop = () => document.getElementById("btnStop");
+const btnSync = () => document.getElementById("btnSync");
 
 function gerarSessionLabel() {
   const agora = new Date();
@@ -21,6 +25,16 @@ function gerarSessionLabel() {
 
 function updateStatus(message) {
   document.getElementById("status").innerText = message;
+}
+
+function setActiveButton(activeButton) {
+  btnStart().classList.remove("btn-active");
+  btnStop().classList.remove("btn-active");
+  btnSync().classList.remove("btn-active");
+
+  if (activeButton === "start") btnStart().classList.add("btn-active");
+  if (activeButton === "stop") btnStop().classList.add("btn-active");
+  if (activeButton === "sync") btnSync().classList.add("btn-active");
 }
 
 function initDB() {
@@ -112,25 +126,33 @@ function startScan() {
     return;
   }
 
-  scanning = true;
+  if (scanning) {
+    updateStatus("Leitura já está em andamento");
+    return;
+  }
 
+  scanning = true;
   sessionId = "SESSAO_" + Date.now();
   sessionLabel = gerarSessionLabel();
 
-  updateStatus("Iniciando leitura...");
+  setActiveButton("start");
+  updateStatus("Lendo...");
   capturarLeitura();
 }
 
 function stopScan() {
   scanning = false;
+  setActiveButton("stop");
 
   contarLeituras((total) => {
-    updateStatus("Finalizado. Total salvo: " + total);
+    updateStatus("Leitura finalizada. Total salvo: " + total);
   });
 }
 
 function capturarLeitura() {
-  if (!scanning) return;
+  if (!scanning) {
+    return;
+  }
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
@@ -158,7 +180,9 @@ function capturarLeitura() {
         await salvarLeitura(leitura);
 
         contarLeituras((total) => {
-          updateStatus("Lendo... total salvo: " + total);
+          if (scanning) {
+            updateStatus("Lendo... " + total + " leitura(s) salva(s)");
+          }
         });
       } catch {
         updateStatus("Erro ao salvar leitura local");
@@ -179,6 +203,8 @@ function capturarLeitura() {
 }
 
 async function syncData() {
+  setActiveButton("sync");
+
   if (!SCRIPT_URL || SCRIPT_URL === "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT") {
     updateStatus("Configure a URL do Apps Script no app.js");
     return;
@@ -197,7 +223,7 @@ async function syncData() {
       return;
     }
 
-    updateStatus("Sincronizando " + leituras.length + " leituras...");
+    updateStatus("Sincronizando " + leituras.length + " leitura(s)...");
 
     const response = await fetch(SCRIPT_URL, {
       method: "POST",
@@ -215,7 +241,7 @@ async function syncData() {
 
     await limparLeituras();
 
-    updateStatus("Sincronizado com sucesso: " + result.registros_recebidos + " leituras");
+    updateStatus("Sincronizado com sucesso: " + result.registros_recebidos + " leitura(s)");
   } catch (error) {
     updateStatus("Erro na sincronização: " + error.message);
   }
