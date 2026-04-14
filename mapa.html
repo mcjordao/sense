@@ -8,6 +8,7 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
   />
 
   <style>
@@ -58,147 +59,251 @@
 </head>
 <body>
 
-<div class="topbar">Nimble Sense</div>
+  <div class="topbar">Nimble Sense</div>
 
-<div class="controls">
-  <label for="sessionSelect">Sessão:</label>
-  <select id="sessionSelect"></select>
-  <button id="reloadBtn">Atualizar</button>
-</div>
+  <div class="controls">
+    <label for="sessionSelect">Sessão:</label>
+    <select id="sessionSelect"></select>
+    <button id="reloadBtn">Atualizar</button>
+  </div>
 
-<div class="info" id="status">Carregando dados...</div>
-<div id="map"></div>
+  <div class="info" id="status">Carregando dados da planilha...</div>
+  <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
-<script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQb2jTurQ3bmlTjrNktoGn3TrGcm2gdUDjEP1teOyFIEvmRU6mFdo84FRIhFza1e1a8BO9g3cmIwPFF/pub?gid=1075648457&single=true&output=csv";
+  <script>
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQb2jTurQ3bmlTjrNktoGn3TrGcm2gdUDjEP1teOyFIEvmRU6mFdo84FRIhFza1e1a8BO9g3cmIwPFF/pub?gid=1075648457&single=true&output=csv";
 
-const statusEl = document.getElementById("status");
-const sessionSelect = document.getElementById("sessionSelect");
-const reloadBtn = document.getElementById("reloadBtn");
+    const statusEl = document.getElementById("status");
+    const sessionSelect = document.getElementById("sessionSelect");
+    const reloadBtn = document.getElementById("reloadBtn");
 
-const map = L.map("map").setView([-23.5882, -46.6439], 18);
+    const map = L.map("map").setView([-23.5882, -46.6439], 18);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 22
-}).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 22,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
 
-let heatLayer;
-let pointLayerGroup = L.layerGroup().addTo(map);
-let allRows = [];
+    let heatLayer = null;
+    let pointLayerGroup = L.layerGroup().addTo(map);
+    let allRows = [];
 
-function parseCSVLine(line) {
-  return line.split(",");
-}
+    function parseCSVLine(line) {
+      const result = [];
+      let current = "";
+      let insideQuotes = false;
 
-function normalizeNumber(value) {
-  return parseFloat(String(value).replace(",", "."));
-}
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i + 1];
 
-function formatSession(sessionId) {
-  const timestamp = sessionId.replace("SESSAO_", "");
-  const date = new Date(parseInt(timestamp));
+        if (char === '"') {
+          if (insideQuotes && nextChar === '"') {
+            current += '"';
+            i++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === "," && !insideQuotes) {
+          result.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
 
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
+      result.push(current);
+      return result;
+    }
 
-function fillSessionSelect(rows) {
-  const sessions = [...new Set(rows.map(r => r.sessionId))];
+    function normalizeNumber(value) {
+      if (value === null || value === undefined) return NaN;
+      const cleaned = String(value).trim().replace(",", ".");
+      return parseFloat(cleaned);
+    }
 
-  sessionSelect.innerHTML = "";
+    function formatSession(sessionId) {
+      if (!sessionId) return "";
 
-  sessions.sort((a,b) => b.localeCompare(a));
+      const timestamp = String(sessionId).replace("SESSAO_", "");
+      const millis = parseInt(timestamp, 10);
 
-  sessions.forEach(s => {
-    const option = document.createElement("option");
-    option.value = s;
-    option.textContent = formatSession(s);
-    sessionSelect.appendChild(option);
-  });
-}
+      if (Number.isNaN(millis)) return sessionId;
 
-function renderMap(rows) {
-  if (!rows.length) return;
+      const date = new Date(millis);
 
-  const maxDuracao = Math.max(...rows.map(r => r.duracao), 1);
+      return date.toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
 
-  const heatData = rows.map(r => [
-    r.lat,
-    r.lon,
-    Math.max(r.duracao / maxDuracao, 0.15)
-  ]);
+    function fillSessionSelect(rows) {
+      const sessions = [...new Set(rows.map(item => item.sessionId))].filter(Boolean);
+      sessions.sort((a, b) => {
+        const aNum = parseInt(String(a).replace("SESSAO_", ""), 10);
+        const bNum = parseInt(String(b).replace("SESSAO_", ""), 10);
+        return bNum - aNum;
+      });
 
-  if (heatLayer) map.removeLayer(heatLayer);
+      sessionSelect.innerHTML = "";
 
-  pointLayerGroup.clearLayers();
+      sessions.forEach(sessionId => {
+        const option = document.createElement("option");
+        option.value = sessionId;
+        option.textContent = formatSession(sessionId);
+        sessionSelect.appendChild(option);
+      });
+    }
 
-  heatLayer = L.heatLayer(heatData, {
-    radius: 35,
-    blur: 25
-  }).addTo(map);
+    function renderMap(rows) {
+      if (!rows.length) {
+        statusEl.innerText = "Nenhum ponto disponível para a sessão selecionada.";
 
-  rows.forEach(r => {
-    L.circleMarker([r.lat, r.lon])
-      .addTo(pointLayerGroup)
-      .bindPopup(`
-        <b>${r.beaconName}</b><br>
-        ${formatSession(r.sessionId)}<br>
-        ${r.duracao}s
-      `);
-  });
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
 
-  map.fitBounds(rows.map(r => [r.lat, r.lon]));
+        pointLayerGroup.clearLayers();
+        return;
+      }
 
-  statusEl.innerText = "Sessão " + formatSession(rows[0].sessionId);
-}
+      const maxDuracao = Math.max(...rows.map(r => r.duracao), 1);
 
-function applySessionFilter() {
-  const selected = sessionSelect.value;
-  const filtered = allRows.filter(r => r.sessionId === selected);
-  renderMap(filtered);
-}
+      const heatData = rows.map(item => [
+        item.lat,
+        item.lon,
+        Math.max(item.duracao / maxDuracao, 0.15)
+      ]);
 
-async function loadHeatmap() {
-  const response = await fetch(CSV_URL);
-  const text = await response.text();
-  const lines = text.trim().split("\n");
+      if (heatLayer) {
+        map.removeLayer(heatLayer);
+      }
 
-  const headers = parseCSVLine(lines[0]);
+      pointLayerGroup.clearLayers();
 
-  const idxSession = headers.indexOf("SESSION_ID");
-  const idxBeaconName = headers.indexOf("BEACON_NAME");
-  const idxLat = headers.indexOf("LAT");
-  const idxLon = headers.indexOf("LON");
-  const idxDur = headers.indexOf("DURACAO");
+      heatLayer = L.heatLayer(heatData, {
+        radius: 35,
+        blur: 25,
+        maxZoom: 20,
+        minOpacity: 0.35
+      }).addTo(map);
 
-  allRows = lines.slice(1).map(line => {
-    const cols = parseCSVLine(line);
+      rows.forEach(item => {
+        L.circleMarker([item.lat, item.lon], {
+          radius: 6,
+          weight: 1,
+          fillOpacity: 0.8
+        })
+        .addTo(pointLayerGroup)
+        .bindPopup(
+          "<b>" + item.beaconName + "</b><br>" +
+          "SESSÃO: " + formatSession(item.sessionId) + "<br>" +
+          "ID: " + item.beaconId + "<br>" +
+          "LAT: " + item.lat + "<br>" +
+          "LON: " + item.lon + "<br>" +
+          "DURAÇÃO: " + item.duracao + " s"
+        );
+      });
 
-    return {
-      sessionId: cols[idxSession],
-      beaconName: cols[idxBeaconName],
-      lat: normalizeNumber(cols[idxLat]),
-      lon: normalizeNumber(cols[idxLon]),
-      duracao: normalizeNumber(cols[idxDur])
-    };
-  });
+      const bounds = L.latLngBounds(rows.map(item => [item.lat, item.lon]));
+      map.fitBounds(bounds.pad(0.2));
 
-  fillSessionSelect(allRows);
-  applySessionFilter();
-}
+      statusEl.innerText =
+        "Sessão " + formatSession(rows[0].sessionId) +
+        " carregada com " + rows.length + " ponto(s).";
+    }
 
-sessionSelect.addEventListener("change", applySessionFilter);
-reloadBtn.addEventListener("click", loadHeatmap);
+    function applySessionFilter() {
+      const selectedSession = sessionSelect.value;
+      const filteredRows = allRows.filter(item => item.sessionId === selectedSession);
+      renderMap(filteredRows);
+    }
 
-loadHeatmap();
-</script>
+    async function loadHeatmap() {
+      try {
+        statusEl.innerText = "Carregando dados da planilha...";
 
+        const response = await fetch(CSV_URL, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("Falha ao acessar CSV");
+        }
+
+        const csvText = await response.text();
+        const lines = csvText.trim().split(/\r?\n/);
+
+        if (lines.length < 2) {
+          throw new Error("CSV sem dados");
+        }
+
+        const headers = parseCSVLine(lines[0]).map(h => h.trim().toUpperCase());
+
+        const idxSessionId = headers.indexOf("SESSION_ID");
+        const idxBeaconId = headers.indexOf("BEACON_ID");
+        const idxBeaconName = headers.indexOf("BEACON_NAME");
+        const idxLat = headers.indexOf("LAT");
+        const idxLon = headers.indexOf("LON");
+        const idxDuracao = headers.indexOf("DURACAO");
+
+        if (
+          idxSessionId === -1 ||
+          idxBeaconId === -1 ||
+          idxBeaconName === -1 ||
+          idxLat === -1 ||
+          idxLon === -1 ||
+          idxDuracao === -1
+        ) {
+          throw new Error("Cabeçalhos esperados não encontrados no CSV");
+        }
+
+        allRows = lines.slice(1)
+          .map(parseCSVLine)
+          .map(cols => {
+            const lat = normalizeNumber(cols[idxLat]);
+            const lon = normalizeNumber(cols[idxLon]);
+            const duracao = normalizeNumber(cols[idxDuracao]);
+
+            return {
+              sessionId: (cols[idxSessionId] || "").trim(),
+              beaconId: (cols[idxBeaconId] || "").trim(),
+              beaconName: (cols[idxBeaconName] || "").trim(),
+              lat,
+              lon,
+              duracao
+            };
+          })
+          .filter(item =>
+            item.sessionId &&
+            !Number.isNaN(item.lat) &&
+            !Number.isNaN(item.lon) &&
+            !Number.isNaN(item.duracao)
+          );
+
+        if (!allRows.length) {
+          throw new Error("Nenhuma linha válida encontrada");
+        }
+
+        fillSessionSelect(allRows);
+        applySessionFilter();
+      } catch (error) {
+        statusEl.innerText = "Erro ao carregar mapa: " + error.message;
+      }
+    }
+
+    sessionSelect.addEventListener("change", applySessionFilter);
+    reloadBtn.addEventListener("click", loadHeatmap);
+
+    loadHeatmap();
+  </script>
 </body>
 </html>
