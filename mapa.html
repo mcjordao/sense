@@ -13,9 +13,9 @@
 
   <style>
     :root {
-      --bg: #1f1b1b;
+      --bg: #34302F;
       --bg-soft: rgba(255, 255, 255, 0.08);
-      --bg-panel: rgba(20, 20, 20, 0.72);
+      --bg-panel: rgba(20, 20, 20, 0.48);
       --border: rgba(255, 255, 255, 0.12);
       --text: #f1f1f1;
       --text-soft: #cfcfcf;
@@ -33,10 +33,7 @@
       padding: 0;
       height: 100%;
       font-family: Arial, Helvetica, sans-serif;
-      background:
-        linear-gradient(rgba(20,20,20,0.76), rgba(20,20,20,0.82)),
-        radial-gradient(circle at top left, rgba(244,180,0,0.08), transparent 28%),
-        linear-gradient(135deg, #2a2323, #1b1818 60%, #181616);
+      background: var(--bg);
       color: var(--text);
       overflow: hidden;
     }
@@ -46,6 +43,7 @@
       flex-direction: column;
       height: 100%;
       width: 100%;
+      background: var(--bg);
     }
 
     .topbar {
@@ -55,42 +53,18 @@
       padding: 18px 28px;
       position: relative;
       z-index: 20;
+      background: var(--bg);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 14px;
     }
 
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle, rgba(244,180,0,0.95) 8%, rgba(244,180,0,0.25) 24%, rgba(255,255,255,0.08) 45%, transparent 60%),
-        #2a2a2a;
-      box-shadow: 0 0 18px rgba(244,180,0,0.18);
-      flex-shrink: 0;
-    }
-
-    .brand-text {
-      line-height: 1;
-    }
-
-    .brand-title {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 0.5px;
-    }
-
-    .brand-subtitle {
-      font-size: 11px;
-      color: var(--text-soft);
-      text-transform: lowercase;
-      margin-top: 3px;
-      letter-spacing: 0.6px;
+    .brand-logo {
+      height: 72px;
+      width: auto;
+      display: block;
     }
 
     .nav {
@@ -123,32 +97,6 @@
       border-radius: 999px;
     }
 
-    .hero {
-      padding: 8px 28px 18px 28px;
-      position: relative;
-      z-index: 10;
-    }
-
-    .hero h1 {
-      margin: 12px 0 8px 0;
-      font-size: clamp(28px, 4vw, 48px);
-      line-height: 1.15;
-      font-weight: 700;
-      max-width: 980px;
-      color: var(--text);
-    }
-
-    .hero .accent {
-      color: var(--accent);
-    }
-
-    .hero p {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 15px;
-      max-width: 720px;
-    }
-
     .workspace {
       flex: 1;
       min-height: 0;
@@ -158,6 +106,7 @@
       gap: 18px;
       position: relative;
       z-index: 10;
+      background: var(--bg);
     }
 
     .sidebar,
@@ -360,8 +309,8 @@
         display: none;
       }
 
-      .hero h1 {
-        max-width: 100%;
+      .brand-logo {
+        height: 56px;
       }
     }
   </style>
@@ -371,11 +320,7 @@
   <div class="page">
     <div class="topbar">
       <div class="brand">
-        <div class="brand-mark"></div>
-        <div class="brand-text">
-          <div class="brand-title">nimble</div>
-          <div class="brand-subtitle">virtual solutions</div>
-        </div>
+        <img class="brand-logo" src="Nimble%20VS%20AM%20CENTRO.png" alt="Nimble Virtual Solutions">
       </div>
 
       <div class="nav">
@@ -383,16 +328,6 @@
         <a href="#" class="nav-item">serviços</a>
         <a href="#" class="nav-item">contato</a>
       </div>
-    </div>
-
-    <div class="hero">
-      <h1>
-        Visualização <span class="accent">inteligente</span> de presença e
-        permanência em campo com <span class="accent">Nimble Sense</span>
-      </h1>
-      <p>
-        Heatmap operacional com dados coletados em dispositivo móvel, tratados em planilha e exibidos em tempo real na web.
-      </p>
     </div>
 
     <div class="workspace">
