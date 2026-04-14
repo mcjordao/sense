@@ -81,16 +81,80 @@
     .floating-panel {
       position: absolute;
       top: 112px;
-      left: 18px;
+      left: 46px;
       z-index: 900;
-      width: 300px;
-      max-width: calc(100vw - 36px);
+      width: 320px;
+      max-width: calc(100vw - 92px);
       background: var(--panel);
       backdrop-filter: blur(10px);
       border: 1px solid var(--border);
       border-radius: 20px;
       box-shadow: var(--shadow);
       overflow: hidden;
+      transition: 0.2s ease;
+    }
+
+    .floating-panel.collapsed .floating-body {
+      display: none;
+    }
+
+    .floating-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .floating-panel.collapsed .floating-header {
+      border-bottom: none;
+    }
+
+    .floating-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(244,180,0,0.45);
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+      min-width: 96px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: rgba(244,180,0,0.24);
+    }
+
+    .btn-icon {
+      min-width: 38px;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
     }
 
     .floating-body {
@@ -106,14 +170,6 @@
       gap: 8px;
     }
 
-    .field label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-soft);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
     .field select {
       width: 100%;
       padding: 13px 14px;
@@ -127,26 +183,6 @@
 
     .field select option {
       color: #111;
-    }
-
-    .btn {
-      appearance: none;
-      border: 1px solid rgba(244,180,0,0.45);
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      padding: 11px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: 0.2s ease;
-      width: fit-content;
-      min-width: 110px;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      background: rgba(244,180,0,0.24);
     }
 
     .legend {
@@ -239,10 +275,27 @@
 
       .floating-panel {
         top: 98px;
-        left: 12px;
+        left: 56px;
         right: 12px;
         width: auto;
         max-width: none;
+      }
+
+      .floating-header {
+        padding: 12px 14px;
+      }
+
+      .btn {
+        min-width: 88px;
+        padding: 9px 12px;
+        font-size: 12px;
+      }
+
+      .btn-icon {
+        min-width: 34px;
+        width: 34px;
+        height: 34px;
+        font-size: 16px;
       }
 
       .status-chip {
@@ -267,14 +320,20 @@
       <img class="brand-logo" src="Nimble VS AM CENTRO.png" alt="Nimble Virtual Solutions">
     </div>
 
-    <div class="floating-panel">
+    <div class="floating-panel" id="floatingPanel">
+      <div class="floating-header">
+        <div class="floating-title">Leituras</div>
+
+        <div class="header-actions">
+          <button class="btn" id="reloadBtn">Atualizar</button>
+          <button class="btn btn-icon" id="togglePanelBtn" title="Expandir / recolher">−</button>
+        </div>
+      </div>
+
       <div class="floating-body">
         <div class="field">
-          <label for="sessionSelect">Sessão</label>
           <select id="sessionSelect"></select>
         </div>
-
-        <button class="btn" id="reloadBtn">Atualizar</button>
 
         <div class="legend">
           <div class="legend-title">Intensidade de Permanência</div>
@@ -304,6 +363,8 @@
     const statusEl = document.getElementById("status");
     const sessionSelect = document.getElementById("sessionSelect");
     const reloadBtn = document.getElementById("reloadBtn");
+    const floatingPanel = document.getElementById("floatingPanel");
+    const togglePanelBtn = document.getElementById("togglePanelBtn");
 
     const map = L.map("map").setView([-23.5882, -46.6439], 18);
 
@@ -528,8 +589,14 @@
       }
     }
 
+    function togglePanel() {
+      floatingPanel.classList.toggle("collapsed");
+      togglePanelBtn.textContent = floatingPanel.classList.contains("collapsed") ? "+" : "−";
+    }
+
     sessionSelect.addEventListener("change", applySessionFilter);
     reloadBtn.addEventListener("click", loadHeatmap);
+    togglePanelBtn.addEventListener("click", togglePanel);
 
     loadHeatmap();
   </script>
