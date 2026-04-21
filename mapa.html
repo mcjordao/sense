@@ -219,7 +219,7 @@
       left: 18px;
       bottom: 18px;
       z-index: 900;
-      max-width: min(420px, calc(100vw - 36px));
+      max-width: min(520px, calc(100vw - 36px));
       background: var(--panel-strong);
       color: var(--text-soft);
       border: 1px solid rgba(255,255,255,0.08);
@@ -411,6 +411,14 @@
       return parseFloat(cleaned);
     }
 
+    function getHeaderIndex(headers, alternatives) {
+      for (const name of alternatives) {
+        const idx = headers.indexOf(name);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    }
+
     function formatSession(sessionId) {
       if (!sessionId) return "";
 
@@ -507,7 +515,7 @@
       }).addTo(map);
 
       rows.forEach(item => {
-        const popupName = item.beaconName || "Beacon sem nome";
+        const popupName = item.usuario || item.beaconName || "Beacon sem nome";
 
         L.circleMarker([item.lat, item.lon], {
           radius: 6,
@@ -560,22 +568,24 @@
 
         const headers = parseCSVLine(lines[0]).map(h => h.trim().toUpperCase());
 
-        const idxSessionId = headers.indexOf("SESSION_ID");
-        const idxBeaconId = headers.indexOf("BEACON_ID");
-        const idxBeaconName = headers.indexOf("BEACON_NAME");
-        const idxLat = headers.indexOf("LATITUDE");
-        const idxLon = headers.indexOf("LONGITUDE");
-        const idxRssi = headers.indexOf("RSSI");
+        const idxSessionId = getHeaderIndex(headers, ["SESSION_ID"]);
+        const idxBeaconId = getHeaderIndex(headers, ["BEACON_ID"]);
+        const idxBeaconName = getHeaderIndex(headers, ["BEACON_NAME"]);
+        const idxUsuario = getHeaderIndex(headers, ["USUARIO"]);
+        const idxLat = getHeaderIndex(headers, ["LATITUDE", "LAT"]);
+        const idxLon = getHeaderIndex(headers, ["LONGITUDE", "LON"]);
+        const idxRssi = getHeaderIndex(headers, ["RSSI"]);
 
         if (
           idxSessionId === -1 ||
           idxBeaconId === -1 ||
-          idxBeaconName === -1 ||
           idxLat === -1 ||
           idxLon === -1 ||
           idxRssi === -1
         ) {
-          throw new Error("Cabeçalhos esperados não encontrados no CSV");
+          throw new Error(
+            "Cabeçalhos esperados não encontrados no CSV. Verifique SESSION_ID, BEACON_ID, LAT/LATITUDE, LON/LONGITUDE e RSSI."
+          );
         }
 
         allRows = lines.slice(1)
@@ -588,7 +598,8 @@
             return {
               sessionId: (cols[idxSessionId] || "").trim(),
               beaconId: (cols[idxBeaconId] || "").trim(),
-              beaconName: (cols[idxBeaconName] || "").trim(),
+              beaconName: idxBeaconName >= 0 ? (cols[idxBeaconName] || "").trim() : "",
+              usuario: idxUsuario >= 0 ? (cols[idxUsuario] || "").trim() : "",
               lat,
               lon,
               rssi
@@ -597,7 +608,8 @@
           .filter(item =>
             item.sessionId &&
             !Number.isNaN(item.lat) &&
-            !Number.isNaN(item.lon)
+            !Number.isNaN(item.lon) &&
+            !Number.isNaN(item.rssi)
           );
 
         if (!allRows.length) {
