@@ -98,7 +98,28 @@
       display: none;
     }
 
-    .floating-header {
+    .chart-panel {
+      position: absolute;
+      top: 112px;
+      right: 18px;
+      z-index: 900;
+      width: 420px;
+      max-width: calc(100vw - 36px);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: 0.2s ease;
+    }
+
+    .chart-panel.collapsed .chart-body {
+      display: none;
+    }
+
+    .floating-header,
+    .chart-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -107,11 +128,13 @@
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
-    .floating-panel.collapsed .floating-header {
+    .floating-panel.collapsed .floating-header,
+    .chart-panel.collapsed .chart-header {
       border-bottom: none;
     }
 
-    .floating-title {
+    .floating-title,
+    .chart-title {
       font-size: 13px;
       font-weight: 700;
       color: var(--text-soft);
@@ -157,7 +180,8 @@
       line-height: 1;
     }
 
-    .floating-body {
+    .floating-body,
+    .chart-body {
       padding: 16px;
       display: flex;
       flex-direction: column;
@@ -214,6 +238,28 @@
       color: var(--text-soft);
     }
 
+    .histogram-wrap {
+      width: 100%;
+      height: 220px;
+      padding: 10px 8px 4px 8px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .histogram-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .chart-note {
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--text-soft);
+    }
+
     .status-chip {
       position: absolute;
       left: 18px;
@@ -231,19 +277,8 @@
       box-shadow: var(--shadow);
     }
 
-    .map-caption {
-      position: absolute;
-      right: 18px;
-      bottom: 18px;
-      z-index: 900;
-      background: rgba(18,18,18,0.78);
-      color: var(--text-soft);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 10px 12px;
-      font-size: 12px;
-      backdrop-filter: blur(8px);
-      box-shadow: var(--shadow);
+    .leaflet-control-attribution {
+      display: none;
     }
 
     .leaflet-popup-content-wrapper,
@@ -281,7 +316,17 @@
         max-width: none;
       }
 
-      .floating-header {
+      .chart-panel {
+        top: auto;
+        left: 12px;
+        right: 12px;
+        bottom: 92px;
+        width: auto;
+        max-width: none;
+      }
+
+      .floating-header,
+      .chart-header {
         padding: 12px 14px;
       }
 
@@ -298,17 +343,15 @@
         font-size: 16px;
       }
 
+      .histogram-wrap {
+        height: 180px;
+      }
+
       .status-chip {
         left: 12px;
         right: 12px;
-        bottom: 58px;
-        max-width: none;
-      }
-
-      .map-caption {
-        right: 12px;
         bottom: 12px;
-        font-size: 11px;
+        max-width: none;
       }
     }
   </style>
@@ -346,12 +389,31 @@
       </div>
     </div>
 
+    <div class="chart-panel" id="chartPanel">
+      <div class="chart-header">
+        <div class="chart-title">Dispositivos por leitura</div>
+
+        <div class="header-actions">
+          <button class="btn btn-icon" id="toggleChartBtn" title="Expandir / recolher">−</button>
+        </div>
+      </div>
+
+      <div class="chart-body">
+        <div class="histogram-wrap">
+          <svg class="histogram-svg" id="histogramSvg"></svg>
+        </div>
+
+        <div class="chart-note">
+          Eixo X: data/sessão. Eixo Y: quantidade de BEACON_ID distintos.
+        </div>
+      </div>
+    </div>
+
     <div class="map-wrapper">
       <div id="map"></div>
     </div>
 
     <div class="status-chip" id="status">Carregando dados da planilha...</div>
-    <div class="map-caption">Base cartográfica: OpenStreetMap</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -365,12 +427,16 @@
     const reloadBtn = document.getElementById("reloadBtn");
     const floatingPanel = document.getElementById("floatingPanel");
     const togglePanelBtn = document.getElementById("togglePanelBtn");
+    const chartPanel = document.getElementById("chartPanel");
+    const toggleChartBtn = document.getElementById("toggleChartBtn");
+    const histogramSvg = document.getElementById("histogramSvg");
 
-    const map = L.map("map").setView([-23.5882, -46.6439], 18);
+    const map = L.map("map", {
+      attributionControl: false
+    }).setView([-23.5882, -46.6439], 18);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 22,
-      attribution: "&copy; OpenStreetMap contributors"
+      maxZoom: 22
     }).addTo(map);
 
     let heatLayer = null;
@@ -419,11 +485,19 @@
       return -1;
     }
 
-    function formatSession(sessionId) {
-      if (!sessionId) return "";
+    function getSessionMillis(sessionId) {
+      if (!sessionId) return NaN;
 
       const timestamp = String(sessionId).replace("SESSAO_", "");
       const millis = parseInt(timestamp, 10);
+
+      return millis;
+    }
+
+    function formatSession(sessionId) {
+      if (!sessionId) return "";
+
+      const millis = getSessionMillis(sessionId);
 
       if (Number.isNaN(millis)) return sessionId;
 
@@ -437,6 +511,24 @@
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit"
+      });
+    }
+
+    function formatSessionShort(sessionId) {
+      if (!sessionId) return "";
+
+      const millis = getSessionMillis(sessionId);
+
+      if (Number.isNaN(millis)) return sessionId;
+
+      const date = new Date(millis);
+
+      return date.toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     }
 
@@ -460,8 +552,8 @@
       const sessions = [...new Set(rows.map(item => item.sessionId))].filter(Boolean);
 
       sessions.sort((a, b) => {
-        const aNum = parseInt(String(a).replace("SESSAO_", ""), 10);
-        const bNum = parseInt(String(b).replace("SESSAO_", ""), 10);
+        const aNum = getSessionMillis(a);
+        const bNum = getSessionMillis(b);
         return bNum - aNum;
       });
 
@@ -472,6 +564,177 @@
         option.value = sessionId;
         option.textContent = formatSession(sessionId);
         sessionSelect.appendChild(option);
+      });
+    }
+
+    function getDistinctDeviceCountBySession(rows) {
+      const grouped = new Map();
+
+      rows.forEach(item => {
+        if (!item.sessionId || !item.beaconId) return;
+
+        if (!grouped.has(item.sessionId)) {
+          grouped.set(item.sessionId, new Set());
+        }
+
+        grouped.get(item.sessionId).add(item.beaconId);
+      });
+
+      return [...grouped.entries()]
+        .map(([sessionId, devices]) => ({
+          sessionId,
+          label: formatSessionShort(sessionId),
+          count: devices.size,
+          millis: getSessionMillis(sessionId)
+        }))
+        .sort((a, b) => a.millis - b.millis);
+    }
+
+    function createSvgElement(tagName, attrs) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+
+      Object.keys(attrs).forEach(key => {
+        element.setAttribute(key, attrs[key]);
+      });
+
+      return element;
+    }
+
+    function renderHistogram(rows) {
+      const data = getDistinctDeviceCountBySession(rows);
+      histogramSvg.innerHTML = "";
+
+      if (!data.length) {
+        const emptyText = createSvgElement("text", {
+          x: "50%",
+          y: "50%",
+          "text-anchor": "middle",
+          "dominant-baseline": "middle",
+          fill: "#cfcfcf",
+          "font-size": "12"
+        });
+
+        emptyText.textContent = "Sem dados para exibir";
+        histogramSvg.appendChild(emptyText);
+        return;
+      }
+
+      const width = 380;
+      const height = 200;
+      const margin = {
+        top: 16,
+        right: 16,
+        bottom: 48,
+        left: 34
+      };
+
+      histogramSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const maxCount = Math.max(...data.map(item => item.count), 1);
+      const barGap = 8;
+      const barWidth = Math.max(10, (plotWidth - barGap * (data.length - 1)) / data.length);
+
+      const axisColor = "rgba(255,255,255,0.28)";
+      const textColor = "#cfcfcf";
+      const barColor = "#f4b400";
+
+      const yAxis = createSvgElement("line", {
+        x1: margin.left,
+        y1: margin.top,
+        x2: margin.left,
+        y2: margin.top + plotHeight,
+        stroke: axisColor,
+        "stroke-width": "1"
+      });
+
+      const xAxis = createSvgElement("line", {
+        x1: margin.left,
+        y1: margin.top + plotHeight,
+        x2: margin.left + plotWidth,
+        y2: margin.top + plotHeight,
+        stroke: axisColor,
+        "stroke-width": "1"
+      });
+
+      histogramSvg.appendChild(yAxis);
+      histogramSvg.appendChild(xAxis);
+
+      const yTicks = Math.min(maxCount, 4);
+
+      for (let i = 0; i <= yTicks; i++) {
+        const value = Math.round((maxCount / yTicks) * i);
+        const y = margin.top + plotHeight - (value / maxCount) * plotHeight;
+
+        const gridLine = createSvgElement("line", {
+          x1: margin.left,
+          y1: y,
+          x2: margin.left + plotWidth,
+          y2: y,
+          stroke: "rgba(255,255,255,0.08)",
+          "stroke-width": "1"
+        });
+
+        const tickText = createSvgElement("text", {
+          x: margin.left - 8,
+          y: y + 4,
+          "text-anchor": "end",
+          fill: textColor,
+          "font-size": "10"
+        });
+
+        tickText.textContent = value;
+
+        histogramSvg.appendChild(gridLine);
+        histogramSvg.appendChild(tickText);
+      }
+
+      data.forEach((item, index) => {
+        const x = margin.left + index * (barWidth + barGap);
+        const barHeight = (item.count / maxCount) * plotHeight;
+        const y = margin.top + plotHeight - barHeight;
+
+        const bar = createSvgElement("rect", {
+          x,
+          y,
+          width: barWidth,
+          height: barHeight,
+          rx: "5",
+          fill: barColor,
+          opacity: "0.9"
+        });
+
+        const valueText = createSvgElement("text", {
+          x: x + barWidth / 2,
+          y: y - 6,
+          "text-anchor": "middle",
+          fill: "#f1f1f1",
+          "font-size": "11",
+          "font-weight": "700"
+        });
+
+        valueText.textContent = item.count;
+
+        const labelText = createSvgElement("text", {
+          x: x + barWidth / 2,
+          y: margin.top + plotHeight + 18,
+          "text-anchor": "middle",
+          fill: textColor,
+          "font-size": "9",
+          transform: `rotate(-28 ${x + barWidth / 2} ${margin.top + plotHeight + 18})`
+        });
+
+        labelText.textContent = item.label;
+
+        const title = createSvgElement("title", {});
+        title.textContent = `${formatSession(item.sessionId)}: ${item.count} dispositivo(s) distinto(s)`;
+
+        bar.appendChild(title);
+
+        histogramSvg.appendChild(bar);
+        histogramSvg.appendChild(valueText);
+        histogramSvg.appendChild(labelText);
       });
     }
 
@@ -538,9 +801,12 @@
       const bounds = L.latLngBounds(rows.map(item => [item.lat, item.lon]));
       map.fitBounds(bounds.pad(0.2));
 
+      const distinctDevices = new Set(rows.map(item => item.beaconId).filter(Boolean)).size;
+
       statusEl.innerText =
         "Sessão " + formatSession(rows[0].sessionId) +
-        " carregada com " + rows.length + " ponto(s).";
+        " carregada com " + rows.length + " ponto(s) e " +
+        distinctDevices + " dispositivo(s) distinto(s).";
     }
 
     function applySessionFilter() {
@@ -617,9 +883,11 @@
         }
 
         fillSessionSelect(allRows);
+        renderHistogram(allRows);
         applySessionFilter();
       } catch (error) {
         statusEl.innerText = "Erro ao carregar mapa: " + error.message;
+        renderHistogram([]);
       }
     }
 
@@ -628,9 +896,15 @@
       togglePanelBtn.textContent = floatingPanel.classList.contains("collapsed") ? "+" : "−";
     }
 
+    function toggleChart() {
+      chartPanel.classList.toggle("collapsed");
+      toggleChartBtn.textContent = chartPanel.classList.contains("collapsed") ? "+" : "−";
+    }
+
     sessionSelect.addEventListener("change", applySessionFilter);
     reloadBtn.addEventListener("click", loadHeatmap);
     togglePanelBtn.addEventListener("click", togglePanel);
+    toggleChartBtn.addEventListener("click", toggleChart);
 
     loadHeatmap();
   </script>
