@@ -219,7 +219,7 @@
       left: 18px;
       bottom: 18px;
       z-index: 900;
-      max-width: min(420px, calc(100vw - 36px));
+      max-width: min(520px, calc(100vw - 36px));
       background: var(--panel-strong);
       color: var(--text-soft);
       border: 1px solid rgba(255,255,255,0.08);
@@ -336,11 +336,11 @@
         </div>
 
         <div class="legend">
-          <div class="legend-title">Intensidade de Permanência</div>
+          <div class="legend-title">Intensidade do Sinal (RSSI)</div>
           <div class="legend-scale"></div>
           <div class="legend-row">
-            <span>Menor</span>
-            <span>Maior</span>
+            <span>Mais fraco</span>
+            <span>Mais forte</span>
           </div>
         </div>
       </div>
@@ -411,6 +411,14 @@
       return parseFloat(cleaned);
     }
 
+    function getHeaderIndex(headers, alternatives) {
+      for (const name of alternatives) {
+        const idx = headers.indexOf(name);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    }
+
     function formatSession(sessionId) {
       if (!sessionId) return "";
 
@@ -430,6 +438,22 @@
         minute: "2-digit",
         second: "2-digit"
       });
+    }
+
+    function formatRssi(rssi) {
+      if (Number.isNaN(rssi)) return "--";
+      return `${Math.round(rssi)} dBm`;
+    }
+
+    function getHeatWeightFromRssi(rssi, minRssi, maxRssi) {
+      if (Number.isNaN(rssi)) return 0.15;
+
+      if (maxRssi === minRssi) {
+        return 1;
+      }
+
+      const normalized = (rssi - minRssi) / (maxRssi - minRssi);
+      return Math.max(normalized, 0.15);
     }
 
     function fillSessionSelect(rows) {
@@ -464,12 +488,17 @@
         return;
       }
 
-      const maxDuracao = Math.max(...rows.map(r => r.duracao), 1);
+      const validRssiValues = rows
+        .map(r => r.rssi)
+        .filter(rssi => !Number.isNaN(rssi));
+
+      const minRssi = validRssiValues.length ? Math.min(...validRssiValues) : -100;
+      const maxRssi = validRssiValues.length ? Math.max(...validRssiValues) : -30;
 
       const heatData = rows.map(item => [
         item.lat,
         item.lon,
-        Math.max(item.duracao / maxDuracao, 0.15)
+        getHeatWeightFromRssi(item.rssi, minRssi, maxRssi)
       ]);
 
       if (heatLayer) {
@@ -486,6 +515,8 @@
       }).addTo(map);
 
       rows.forEach(item => {
+        const popupName = item.usuario || item.beaconName || "Beacon sem nome";
+
         L.circleMarker([item.lat, item.lon], {
           radius: 6,
           weight: 1,
@@ -495,12 +526,12 @@
         })
         .addTo(pointLayerGroup)
         .bindPopup(
-          "<b>" + item.beaconName + "</b><br>" +
+          "<b>" + popupName + "</b><br>" +
           "SESSÃO: " + formatSession(item.sessionId) + "<br>" +
           "ID: " + item.beaconId + "<br>" +
+          "RSSI: " + formatRssi(item.rssi) + "<br>" +
           "LAT: " + item.lat + "<br>" +
-          "LON: " + item.lon + "<br>" +
-          "DURAÇÃO: " + Math.round(item.duracao) + " s"
+          "LON: " + item.lon
         );
       });
 
@@ -537,22 +568,24 @@
 
         const headers = parseCSVLine(lines[0]).map(h => h.trim().toUpperCase());
 
-        const idxSessionId = headers.indexOf("SESSION_ID");
-        const idxBeaconId = headers.indexOf("BEACON_ID");
-        const idxBeaconName = headers.indexOf("BEACON_NAME");
-        const idxLat = headers.indexOf("LAT");
-        const idxLon = headers.indexOf("LON");
-        const idxDuracao = headers.indexOf("DURACAO");
+        const idxSessionId = getHeaderIndex(headers, ["SESSION_ID"]);
+        const idxBeaconId = getHeaderIndex(headers, ["BEACON_ID"]);
+        const idxBeaconName = getHeaderIndex(headers, ["BEACON_NAME"]);
+        const idxUsuario = getHeaderIndex(headers, ["USUARIO"]);
+        const idxLat = getHeaderIndex(headers, ["LATITUDE", "LAT"]);
+        const idxLon = getHeaderIndex(headers, ["LONGITUDE", "LON"]);
+        const idxRssi = getHeaderIndex(headers, ["RSSI"]);
 
         if (
           idxSessionId === -1 ||
           idxBeaconId === -1 ||
-          idxBeaconName === -1 ||
           idxLat === -1 ||
           idxLon === -1 ||
-          idxDuracao === -1
+          idxRssi === -1
         ) {
-          throw new Error("Cabeçalhos esperados não encontrados no CSV");
+          throw new Error(
+            "Cabeçalhos esperados não encontrados no CSV. Verifique SESSION_ID, BEACON_ID, LAT/LATITUDE, LON/LONGITUDE e RSSI."
+          );
         }
 
         allRows = lines.slice(1)
@@ -560,22 +593,23 @@
           .map(cols => {
             const lat = normalizeNumber(cols[idxLat]);
             const lon = normalizeNumber(cols[idxLon]);
-            const duracao = normalizeNumber(cols[idxDuracao]);
+            const rssi = normalizeNumber(cols[idxRssi]);
 
             return {
               sessionId: (cols[idxSessionId] || "").trim(),
               beaconId: (cols[idxBeaconId] || "").trim(),
-              beaconName: (cols[idxBeaconName] || "").trim(),
+              beaconName: idxBeaconName >= 0 ? (cols[idxBeaconName] || "").trim() : "",
+              usuario: idxUsuario >= 0 ? (cols[idxUsuario] || "").trim() : "",
               lat,
               lon,
-              duracao
+              rssi
             };
           })
           .filter(item =>
             item.sessionId &&
             !Number.isNaN(item.lat) &&
             !Number.isNaN(item.lon) &&
-            !Number.isNaN(item.duracao)
+            !Number.isNaN(item.rssi)
           );
 
         if (!allRows.length) {
@@ -602,4 +636,3 @@
   </script>
 </body>
 </html>
-
