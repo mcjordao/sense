@@ -103,7 +103,7 @@
       top: 112px;
       right: 18px;
       z-index: 900;
-      width: 420px;
+      width: 440px;
       max-width: calc(100vw - 36px);
       background: var(--panel);
       backdrop-filter: blur(10px);
@@ -238,8 +238,31 @@
       color: var(--text-soft);
     }
 
-    .histogram-wrap {
+    .histogram-scroll {
       width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(244,180,0,0.65) rgba(255,255,255,0.08);
+    }
+
+    .histogram-scroll::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .histogram-scroll::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+    }
+
+    .histogram-scroll::-webkit-scrollbar-thumb {
+      background: rgba(244,180,0,0.65);
+      border-radius: 999px;
+    }
+
+    .histogram-wrap {
+      min-width: 100%;
       height: 220px;
       padding: 10px 8px 4px 8px;
       border-radius: 16px;
@@ -248,7 +271,6 @@
     }
 
     .histogram-svg {
-      width: 100%;
       height: 100%;
       display: block;
       overflow: visible;
@@ -389,22 +411,24 @@
       </div>
     </div>
 
-    <div class="chart-panel" id="chartPanel">
+    <div class="chart-panel collapsed" id="chartPanel">
       <div class="chart-header">
         <div class="chart-title">Dispositivos por leitura</div>
 
         <div class="header-actions">
-          <button class="btn btn-icon" id="toggleChartBtn" title="Expandir / recolher">−</button>
+          <button class="btn btn-icon" id="toggleChartBtn" title="Expandir / recolher">+</button>
         </div>
       </div>
 
       <div class="chart-body">
-        <div class="histogram-wrap">
-          <svg class="histogram-svg" id="histogramSvg"></svg>
+        <div class="histogram-scroll" id="histogramScroll">
+          <div class="histogram-wrap" id="histogramWrap">
+            <svg class="histogram-svg" id="histogramSvg"></svg>
+          </div>
         </div>
 
         <div class="chart-note">
-          Eixo X: data/sessão. Eixo Y: quantidade de BEACON_ID distintos.
+          Eixo X: data/sessão. Eixo Y: quantidade de BEACON_ID distintos. Arraste horizontalmente para ver mais sessões.
         </div>
       </div>
     </div>
@@ -430,6 +454,7 @@
     const chartPanel = document.getElementById("chartPanel");
     const toggleChartBtn = document.getElementById("toggleChartBtn");
     const histogramSvg = document.getElementById("histogramSvg");
+    const histogramWrap = document.getElementById("histogramWrap");
 
     const map = L.map("map", {
       attributionControl: false
@@ -605,9 +630,13 @@
       histogramSvg.innerHTML = "";
 
       if (!data.length) {
+        histogramWrap.style.width = "100%";
+        histogramSvg.setAttribute("width", "100%");
+        histogramSvg.setAttribute("viewBox", "0 0 420 200");
+
         const emptyText = createSvgElement("text", {
-          x: "50%",
-          y: "50%",
+          x: "210",
+          y: "100",
           "text-anchor": "middle",
           "dominant-baseline": "middle",
           fill: "#cfcfcf",
@@ -619,22 +648,27 @@
         return;
       }
 
-      const width = 380;
-      const height = 200;
+      const minBarWidth = 28;
+      const barGap = 10;
       const margin = {
         top: 16,
-        right: 16,
-        bottom: 48,
+        right: 18,
+        bottom: 54,
         left: 34
       };
 
-      histogramSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-
+      const visibleBaseWidth = 420;
+      const plotWidthByData = data.length * minBarWidth + Math.max(0, data.length - 1) * barGap;
+      const width = Math.max(visibleBaseWidth, margin.left + margin.right + plotWidthByData);
+      const height = 200;
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const maxCount = Math.max(...data.map(item => item.count), 1);
-      const barGap = 8;
-      const barWidth = Math.max(10, (plotWidth - barGap * (data.length - 1)) / data.length);
+      const barWidth = minBarWidth;
+
+      histogramWrap.style.width = `${width}px`;
+      histogramSvg.setAttribute("width", `${width}`);
+      histogramSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
       const axisColor = "rgba(255,255,255,0.28)";
       const textColor = "#cfcfcf";
@@ -718,11 +752,11 @@
 
         const labelText = createSvgElement("text", {
           x: x + barWidth / 2,
-          y: margin.top + plotHeight + 18,
+          y: margin.top + plotHeight + 20,
           "text-anchor": "middle",
           fill: textColor,
           "font-size": "9",
-          transform: `rotate(-28 ${x + barWidth / 2} ${margin.top + plotHeight + 18})`
+          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 20})`
         });
 
         labelText.textContent = item.label;
