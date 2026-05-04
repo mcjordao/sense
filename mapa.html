@@ -263,7 +263,7 @@
 
     .histogram-wrap {
       min-width: 100%;
-      height: 220px;
+      height: 250px;
       padding: 10px 8px 4px 8px;
       border-radius: 16px;
       background: rgba(255,255,255,0.04);
@@ -313,6 +313,13 @@
       margin: 12px 14px;
       font-size: 13px;
       line-height: 1.45;
+    }
+
+    .popup-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #f4b400;
+      margin-bottom: 6px;
     }
 
     @media (max-width: 768px) {
@@ -366,7 +373,7 @@
       }
 
       .histogram-wrap {
-        height: 180px;
+        height: 220px;
       }
 
       .status-chip {
@@ -625,11 +632,11 @@
       if (!data.length) {
         histogramWrap.style.width = "100%";
         histogramSvg.setAttribute("width", "100%");
-        histogramSvg.setAttribute("viewBox", "0 0 420 200");
+        histogramSvg.setAttribute("viewBox", "0 0 420 230");
 
         const emptyText = createSvgElement("text", {
           x: "210",
-          y: "100",
+          y: "115",
           "text-anchor": "middle",
           "dominant-baseline": "middle",
           fill: "#cfcfcf",
@@ -646,14 +653,14 @@
       const margin = {
         top: 16,
         right: 18,
-        bottom: 54,
+        bottom: 86,
         left: 34
       };
 
       const visibleBaseWidth = 420;
       const plotWidthByData = data.length * minBarWidth + Math.max(0, data.length - 1) * barGap;
       const width = Math.max(visibleBaseWidth, margin.left + margin.right + plotWidthByData);
-      const height = 200;
+      const height = 230;
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const maxCount = Math.max(...data.map(item => item.count), 1);
@@ -745,11 +752,11 @@
 
         const labelText = createSvgElement("text", {
           x: x + barWidth / 2,
-          y: margin.top + plotHeight + 20,
+          y: margin.top + plotHeight + 42,
           "text-anchor": "middle",
           fill: textColor,
           "font-size": "9",
-          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 20})`
+          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 42})`
         });
 
         labelText.textContent = item.label;
@@ -809,11 +816,11 @@
         })
         .addTo(pointLayerGroup)
         .bindPopup(
-          "<b>" + sanitizeText(popupName) + "</b><br>" +
-          "MAC: " + sanitizeText(item.macAddress || "NÃO CADASTRADO") + "<br>" +
-          "LEITURA: " + sanitizeText(item.timestampLeitura || "--") + "<br>" +
-          "LAT: " + sanitizeText(item.lat) + "<br>" +
-          "LON: " + sanitizeText(item.lon)
+          "<div class='popup-title'>" + sanitizeText(popupName) + "</div>" +
+          "ID: " + sanitizeText(item.macAddress || "NÃO CADASTRADO") + "<br>" +
+          "LATITUDE: " + sanitizeText(item.lat) + "<br>" +
+          "LONGITUDE: " + sanitizeText(item.lon) + "<br>" +
+          "LEITURA: " + sanitizeText(item.timestampLeitura || "--")
         );
       });
 
