@@ -518,21 +518,19 @@
 
     function getSessionMillis(sessionId) {
       if (!sessionId) return NaN;
-
       const timestamp = String(sessionId).replace("SESSAO_", "");
-      const millis = parseInt(timestamp, 10);
+      return parseInt(timestamp, 10);
+    }
 
-      return millis;
+    function getSessionDate(sessionId) {
+      const millis = getSessionMillis(sessionId);
+      if (Number.isNaN(millis)) return null;
+      return new Date(millis);
     }
 
     function formatSession(sessionId) {
-      if (!sessionId) return "";
-
-      const millis = getSessionMillis(sessionId);
-
-      if (Number.isNaN(millis)) return sessionId;
-
-      const date = new Date(millis);
+      const date = getSessionDate(sessionId);
+      if (!date) return sessionId || "";
 
       return date.toLocaleString("pt-BR", {
         timeZone: "America/Sao_Paulo",
@@ -545,21 +543,15 @@
       });
     }
 
-    function formatSessionShort(sessionId) {
-      if (!sessionId) return "";
+    function formatSessionDateOnly(sessionId) {
+      const date = getSessionDate(sessionId);
+      if (!date) return sessionId || "";
 
-      const millis = getSessionMillis(sessionId);
-
-      if (Number.isNaN(millis)) return sessionId;
-
-      const date = new Date(millis);
-
-      return date.toLocaleString("pt-BR", {
+      return date.toLocaleDateString("pt-BR", {
         timeZone: "America/Sao_Paulo",
         day: "2-digit",
         month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
+        year: "numeric"
       });
     }
 
@@ -598,7 +590,7 @@
       return [...grouped.entries()]
         .map(([sessionId, devices]) => ({
           sessionId,
-          label: formatSessionShort(sessionId),
+          label: formatSessionDateOnly(sessionId),
           count: devices.size,
           millis: getSessionMillis(sessionId)
         }))
@@ -643,7 +635,7 @@
       const margin = {
         top: 20,
         right: 18,
-        bottom: 64,
+        bottom: 78,
         left: 18
       };
 
@@ -682,6 +674,8 @@
         const x = margin.left + index * (barWidth + barGap);
         const barHeight = (item.count / maxCount) * plotHeight;
         const y = margin.top + plotHeight - barHeight;
+        const labelAnchorX = x + barWidth;
+        const labelAnchorY = margin.top + plotHeight + 48;
 
         const bar = createSvgElement("rect", {
           x,
@@ -705,18 +699,19 @@
         valueText.textContent = item.count;
 
         const labelText = createSvgElement("text", {
-          x: x + barWidth / 2,
-          y: margin.top + plotHeight + 38,
-          "text-anchor": "middle",
+          x: labelAnchorX,
+          y: labelAnchorY,
+          "text-anchor": "end",
           fill: textColor,
           "font-size": "9",
-          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 38})`
+          "font-weight": "700",
+          transform: `rotate(-36 ${labelAnchorX} ${labelAnchorY})`
         });
 
         labelText.textContent = item.label;
 
         const title = createSvgElement("title", {});
-        title.textContent = `${formatSession(item.sessionId)}: ${item.count} dispositivo(s) distinto(s)`;
+        title.textContent = `${item.label}: ${item.count} dispositivo(s) localizado(s)`;
 
         bar.appendChild(title);
 
@@ -782,11 +777,11 @@
       map.fitBounds(bounds.pad(0.2));
 
       const distinctDevices = new Set(rows.map(item => item.beaconId).filter(Boolean)).size;
+      const sessionDate = formatSessionDateOnly(rows[0].sessionId);
 
       statusEl.innerText =
-        "Sessão " + formatSession(rows[0].sessionId) +
-        " carregada com " + rows.length + " ponto(s) e " +
-        distinctDevices + " dispositivo(s) distinto(s).";
+        "SESSÃO " + sessionDate + ". " +
+        distinctDevices + " DISPOSITIVOS LOCALIZADOS";
     }
 
     function applySessionFilter() {
