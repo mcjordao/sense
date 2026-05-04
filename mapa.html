@@ -185,7 +185,7 @@
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
     }
 
     .field {
@@ -263,7 +263,7 @@
 
     .histogram-wrap {
       min-width: 100%;
-      height: 250px;
+      height: 230px;
       padding: 10px 8px 4px 8px;
       border-radius: 16px;
       background: rgba(255,255,255,0.04);
@@ -274,12 +274,6 @@
       height: 100%;
       display: block;
       overflow: visible;
-    }
-
-    .chart-note {
-      font-size: 11px;
-      line-height: 1.45;
-      color: var(--text-soft);
     }
 
     .status-chip {
@@ -373,7 +367,7 @@
       }
 
       .histogram-wrap {
-        height: 220px;
+        height: 210px;
       }
 
       .status-chip {
@@ -432,10 +426,6 @@
           <div class="histogram-wrap" id="histogramWrap">
             <svg class="histogram-svg" id="histogramSvg"></svg>
           </div>
-        </div>
-
-        <div class="chart-note">
-          Eixo X: data/sessão. Eixo Y: quantidade de BEACON_ID distintos. Arraste horizontalmente para ver mais sessões.
         </div>
       </div>
     </div>
@@ -632,11 +622,11 @@
       if (!data.length) {
         histogramWrap.style.width = "100%";
         histogramSvg.setAttribute("width", "100%");
-        histogramSvg.setAttribute("viewBox", "0 0 420 230");
+        histogramSvg.setAttribute("viewBox", "0 0 420 210");
 
         const emptyText = createSvgElement("text", {
           x: "210",
-          y: "115",
+          y: "105",
           "text-anchor": "middle",
           "dominant-baseline": "middle",
           fill: "#cfcfcf",
@@ -651,16 +641,16 @@
       const minBarWidth = 28;
       const barGap = 10;
       const margin = {
-        top: 16,
+        top: 20,
         right: 18,
-        bottom: 86,
-        left: 34
+        bottom: 64,
+        left: 18
       };
 
       const visibleBaseWidth = 420;
       const plotWidthByData = data.length * minBarWidth + Math.max(0, data.length - 1) * barGap;
       const width = Math.max(visibleBaseWidth, margin.left + margin.right + plotWidthByData);
-      const height = 230;
+      const height = 210;
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const maxCount = Math.max(...data.map(item => item.count), 1);
@@ -670,36 +660,11 @@
       histogramSvg.setAttribute("width", `${width}`);
       histogramSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      const axisColor = "rgba(255,255,255,0.28)";
       const textColor = "#cfcfcf";
       const barColor = "#f4b400";
 
-      const yAxis = createSvgElement("line", {
-        x1: margin.left,
-        y1: margin.top,
-        x2: margin.left,
-        y2: margin.top + plotHeight,
-        stroke: axisColor,
-        "stroke-width": "1"
-      });
-
-      const xAxis = createSvgElement("line", {
-        x1: margin.left,
-        y1: margin.top + plotHeight,
-        x2: margin.left + plotWidth,
-        y2: margin.top + plotHeight,
-        stroke: axisColor,
-        "stroke-width": "1"
-      });
-
-      histogramSvg.appendChild(yAxis);
-      histogramSvg.appendChild(xAxis);
-
-      const yTicks = Math.min(maxCount, 4);
-
-      for (let i = 0; i <= yTicks; i++) {
-        const value = Math.round((maxCount / yTicks) * i);
-        const y = margin.top + plotHeight - (value / maxCount) * plotHeight;
+      for (let i = 1; i <= 4; i++) {
+        const y = margin.top + plotHeight - (plotHeight / 4) * i;
 
         const gridLine = createSvgElement("line", {
           x1: margin.left,
@@ -710,18 +675,7 @@
           "stroke-width": "1"
         });
 
-        const tickText = createSvgElement("text", {
-          x: margin.left - 8,
-          y: y + 4,
-          "text-anchor": "end",
-          fill: textColor,
-          "font-size": "10"
-        });
-
-        tickText.textContent = value;
-
         histogramSvg.appendChild(gridLine);
-        histogramSvg.appendChild(tickText);
       }
 
       data.forEach((item, index) => {
@@ -736,7 +690,7 @@
           height: barHeight,
           rx: "5",
           fill: barColor,
-          opacity: "0.9"
+          opacity: "0.95"
         });
 
         const valueText = createSvgElement("text", {
@@ -752,11 +706,11 @@
 
         const labelText = createSvgElement("text", {
           x: x + barWidth / 2,
-          y: margin.top + plotHeight + 42,
+          y: margin.top + plotHeight + 38,
           "text-anchor": "middle",
           fill: textColor,
           "font-size": "9",
-          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 42})`
+          transform: `rotate(-32 ${x + barWidth / 2} ${margin.top + plotHeight + 38})`
         });
 
         labelText.textContent = item.label;
