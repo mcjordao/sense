@@ -401,7 +401,7 @@
         </div>
 
         <div class="legend">
-          <div class="legend-title">Intensidade do Sinal (RSSI)</div>
+          <div class="legend-title">Intensidade do Sinal</div>
           <div class="legend-scale"></div>
           <div class="legend-row">
             <span>Mais fraco</span>
@@ -477,9 +477,9 @@
         const char = line[i];
         const nextChar = line[i + 1];
 
-        if (char === '"') {
-          if (insideQuotes && nextChar === '"') {
-            current += '"';
+        if (char === "\"") {
+          if (insideQuotes && nextChar === "\"") {
+            current += "\"";
             i++;
           } else {
             insideQuotes = !insideQuotes;
@@ -500,6 +500,15 @@
       if (value === null || value === undefined) return NaN;
       const cleaned = String(value).trim().replace(",", ".");
       return parseFloat(cleaned);
+    }
+
+    function sanitizeText(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     function getHeaderIndex(headers, alternatives) {
@@ -555,22 +564,6 @@
         hour: "2-digit",
         minute: "2-digit"
       });
-    }
-
-    function formatRssi(rssi) {
-      if (Number.isNaN(rssi)) return "--";
-      return `${Math.round(rssi)} dBm`;
-    }
-
-    function getHeatWeightFromRssi(rssi, minRssi, maxRssi) {
-      if (Number.isNaN(rssi)) return 0.15;
-
-      if (maxRssi === minRssi) {
-        return 1;
-      }
-
-      const normalized = (rssi - minRssi) / (maxRssi - minRssi);
-      return Math.max(normalized, 0.15);
     }
 
     function fillSessionSelect(rows) {
@@ -785,17 +778,10 @@
         return;
       }
 
-      const validRssiValues = rows
-        .map(r => r.rssi)
-        .filter(rssi => !Number.isNaN(rssi));
-
-      const minRssi = validRssiValues.length ? Math.min(...validRssiValues) : -100;
-      const maxRssi = validRssiValues.length ? Math.max(...validRssiValues) : -30;
-
       const heatData = rows.map(item => [
         item.lat,
         item.lon,
-        getHeatWeightFromRssi(item.rssi, minRssi, maxRssi)
+        item.pesoHeatmap
       ]);
 
       if (heatLayer) {
@@ -823,12 +809,11 @@
         })
         .addTo(pointLayerGroup)
         .bindPopup(
-          "<b>" + popupName + "</b><br>" +
-          "SESSÃO: " + formatSession(item.sessionId) + "<br>" +
-          "ID: " + item.beaconId + "<br>" +
-          "RSSI: " + formatRssi(item.rssi) + "<br>" +
-          "LAT: " + item.lat + "<br>" +
-          "LON: " + item.lon
+          "<b>" + sanitizeText(popupName) + "</b><br>" +
+          "MAC: " + sanitizeText(item.macAddress || "NÃO CADASTRADO") + "<br>" +
+          "LEITURA: " + sanitizeText(item.timestampLeitura || "--") + "<br>" +
+          "LAT: " + sanitizeText(item.lat) + "<br>" +
+          "LON: " + sanitizeText(item.lon)
         );
       });
 
@@ -872,9 +857,13 @@
         const idxBeaconId = getHeaderIndex(headers, ["BEACON_ID"]);
         const idxBeaconName = getHeaderIndex(headers, ["BEACON_NAME"]);
         const idxUsuario = getHeaderIndex(headers, ["USUARIO"]);
+        const idxMacAddress = getHeaderIndex(headers, ["MAC_ADDRESS"]);
+        const idxImagem = getHeaderIndex(headers, ["IMAGEM"]);
+        const idxTimestampLeitura = getHeaderIndex(headers, ["TIMESTAMP_LEITURA"]);
         const idxLat = getHeaderIndex(headers, ["LATITUDE", "LAT"]);
         const idxLon = getHeaderIndex(headers, ["LONGITUDE", "LON"]);
         const idxRssi = getHeaderIndex(headers, ["RSSI"]);
+        const idxPesoHeatmap = getHeaderIndex(headers, ["PESO_HEATMAP"]);
 
         if (
           idxSessionId === -1 ||
@@ -894,15 +883,21 @@
             const lat = normalizeNumber(cols[idxLat]);
             const lon = normalizeNumber(cols[idxLon]);
             const rssi = normalizeNumber(cols[idxRssi]);
+            const pesoRaw = idxPesoHeatmap >= 0 ? normalizeNumber(cols[idxPesoHeatmap]) : NaN;
+            const pesoHeatmap = Number.isNaN(pesoRaw) ? 0.2 : Math.max(0.05, Math.min(pesoRaw / 100, 1));
 
             return {
               sessionId: (cols[idxSessionId] || "").trim(),
               beaconId: (cols[idxBeaconId] || "").trim(),
               beaconName: idxBeaconName >= 0 ? (cols[idxBeaconName] || "").trim() : "",
               usuario: idxUsuario >= 0 ? (cols[idxUsuario] || "").trim() : "",
+              macAddress: idxMacAddress >= 0 ? (cols[idxMacAddress] || "").trim() : "",
+              imagem: idxImagem >= 0 ? (cols[idxImagem] || "").trim() : "",
+              timestampLeitura: idxTimestampLeitura >= 0 ? (cols[idxTimestampLeitura] || "").trim() : "",
               lat,
               lon,
-              rssi
+              rssi,
+              pesoHeatmap
             };
           })
           .filter(item =>
